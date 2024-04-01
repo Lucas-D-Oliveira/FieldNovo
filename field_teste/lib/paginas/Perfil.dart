@@ -82,6 +82,7 @@ class _PerfilState extends State<Perfil> {
             child: FloatingActionButton(
               onPressed: () {
                 // Ação ao pressionar o botão esquerdo
+                Navigator.pop(context);
               },
               backgroundColor: Colors.red, // Cor de fundo do botão esquerdo
               child: Icon(Icons.logout, color: Colors.white,), // Ícone do botão esquerdo
