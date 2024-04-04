@@ -1,19 +1,101 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-
+import 'package:field_teste/api/api.dart';
 
 class Coletando extends StatefulWidget {
-  const Coletando({super.key});
+  const Coletando({Key? key});
 
   @override
   State<Coletando> createState() => _ColetandoState();
 }
 
 class _ColetandoState extends State<Coletando> {
+  int indexR = 0;
+  int indexT = 0;
+  int indexV = 0;
+  Map<String, List<String>>? parcelas;
+  List<String>? tratamentos;
+  List<String>? repeticao;
+  List<String>? variavel;
   Color iconeCor = Color(0xFF57636C);
   Color base = Color(0xFF038C4C);
+  String dropdownValue = 'Tratamento';
+  String? mensagemErro;
+  bool variavelNula = false;
+
+  @override
+  void initState() {
+    super.initState();
+    carregarDados();
+  }
+
+  void carregarDados() async {
+    Map<String, dynamic> data = await API.fetch("coleta");
+    setState(() {
+      parcelas = (data['parcelas'] as Map<String, dynamic>).map((key, value) => MapEntry(key, List<String>.from(value)));
+      tratamentos = (data['tratamentos'] as List).cast<String>();
+      repeticao = (data['repeticao'] as List).cast<String>();
+      variavel = (data['variavel'] as List).cast<String>();
+    });
+  }
+
+  String? encontrarParcela() {
+    if (tratamentos != null && repeticao != null && parcelas != null) {
+      for (final entry in parcelas!.entries) {
+        if (entry.value[0] == tratamentos![indexT] && entry.value[1] == repeticao![indexR]) {
+          return entry.key;
+        }
+      }
+    }
+    return null;
+  }
+
+  void buscar(String termo, String tipo) {
+    int novoIndice = 0;
+    bool encontrado = false;
+
+    if (tipo == 'Tratamento') {
+      novoIndice = tratamentos!.indexOf(termo);
+      if (novoIndice != -1) {
+        setState(() {
+          indexT = novoIndice;
+          mensagemErro = null;
+        });
+        encontrado = true;
+      }
+    } else if (tipo == 'Repetição') {
+      novoIndice = repeticao!.indexOf(termo);
+      if (novoIndice != -1) {
+        setState(() {
+          indexR = novoIndice;
+          mensagemErro = null;
+        });
+        encontrado = true;
+      }
+    } else if (tipo == 'Parcela') {
+      for (final entry in parcelas!.entries) {
+        if (entry.key == termo) {
+          setState(() {
+            indexT = tratamentos!.indexOf(entry.value[0]);
+            indexR = repeticao!.indexOf(entry.value[1]);
+            mensagemErro = null;
+          });
+          encontrado = true;
+          break;
+        }
+      }
+    }
+
+    if (!encontrado) {
+      setState(() {
+        mensagemErro = 'Item não encontrado';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    String? parcelaEncontrada = encontrarParcela();
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -28,164 +110,162 @@ class _ColetandoState extends State<Coletando> {
                 },
                 icon: Icon(Icons.arrow_back, size: 35, color: Colors.white),
               ),
-
               SizedBox(width: 30),
-
               Text("Coleta de solo", style: TextStyle(color: Colors.white, fontSize: 30)),
-
               SizedBox(width: 40),
-
               IconButton(
-                onPressed: () {
-
-                },
+                onPressed: () {},
                 icon: Icon(Icons.photo_camera, size: 35, color: Colors.white),
               ),
             ],
           ),
         ),
       ),
-
-      body: Container( ////////////FUNDO
+      body: Container(
         width: double.infinity,
         height: double.infinity,
         padding: EdgeInsets.only(bottom: 20, top: 20, right: 10, left: 10),
         child: Column(
           children: [
-
             Center(
               child: Text(
-                'Parcela 101',
+                'Parcela ${parcelaEncontrada ?? ""}',
                 style: TextStyle(fontSize: 25),
               ),
             ),
-
             SizedBox(height: 10),
-
             Center(
               child: Text(
-                'Variável 1/5',
+                'Variável ${indexV + 1}/${variavel?.length}',
                 style: TextStyle(fontSize: 20),
               ),
             ),
-
-      LinearProgressIndicator(
-        value: 1,
-        minHeight: 20.0,
-        backgroundColor: Colors.grey[300],
-        valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-      ),
-
+            LinearProgressIndicator(
+              value: (indexV + 1) / variavel!.length,
+              minHeight: 20.0,
+              backgroundColor: Colors.grey[300],
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+            ),
             SizedBox(height: 20),
-
             Row(
               children: [
-                // Botão esquerdo
                 IconButton(
-                  onPressed: (){},
+                  onPressed: () {
+                    setState(() {
+                      indexV = indexV == 0 ? 0 : indexV - 1;
+                    });
+                  },
                   icon: Icon(Icons.arrow_back_ios, size: 70, color: iconeCor),
                 ),
-
-                // Texto centralizado
                 Expanded(
                   child: Center(
                     child: Text(
-                      "Variável",
+                      "${variavel?[indexV] ?? ''}",
                       style: TextStyle(fontSize: 30),
                     ),
                   ),
                 ),
-
-                // Botão direito
                 IconButton(
-                  onPressed: (){},
+                  onPressed: () {
+                    setState(() {
+                      indexV = indexV == (variavel!.length - 1) ? (variavel!.length - 1) : indexV + 1;
+                    });
+                  },
                   icon: Icon(Icons.arrow_forward_ios, size: 70, color: iconeCor),
                 ),
               ],
             ),
-
-            TextField(
+            TextFormField(
+              enabled: !variavelNula,
               decoration: InputDecoration(
                 border: OutlineInputBorder(borderSide: BorderSide(color: Colors.green)),
                 hintText: 'Informe valor',
               ),
             ),
-
-            Row(/////////////CHECK BOX
+            Row(
               children: [
                 Container(
-                  padding: EdgeInsets.only(left: 16.0), // Adicione o espaçamento desejado à esquerda
+                  padding: EdgeInsets.only(left: 16.0),
                   child: Checkbox(
-                    value: false,
+                    value: variavelNula,
                     onChanged: (bool? value) {
-                      // Lógica para lidar com a mudança de estado da caixa de seleção
+                      setState(() {
+                        variavelNula = value ?? false;
+                      });
                     },
                   ),
                 ),
                 Text(
                   'Deixar variável nula',
-                  style: TextStyle(fontSize: 16.0), // Ajuste o tamanho do texto conforme necessário
+                  style: TextStyle(fontSize: 16.0),
                 ),
               ],
             ),
-
             SizedBox(height: 30),
-
             Row(
               children: [
-                // Botão esquerdo
                 IconButton(
-                  onPressed: (){},
+                  onPressed: () {
+                    setState(() {
+                      indexR = indexR == 0 ? 0 : indexR - 1;
+                    });
+                  },
                   icon: Icon(Icons.arrow_back_ios, size: 70, color: iconeCor),
                 ),
-
-                // Texto centralizado
                 Expanded(
                   child: Center(
                     child: Text(
-                      "Repetição 1",
+                      "${repeticao?[indexR] ?? ''}",
                       style: TextStyle(fontSize: 30),
                     ),
                   ),
                 ),
-
-                // Botão direito
                 IconButton(
-                  onPressed: (){},
+                  onPressed: () {
+                    setState(() {
+                      indexR = indexR == (repeticao!.length - 1) ? (repeticao!.length - 1) : indexR + 1;
+                    });
+                  },
                   icon: Icon(Icons.arrow_forward_ios, size: 70, color: iconeCor),
                 ),
               ],
             ),
-
             SizedBox(height: 30),
-
             Row(
               children: [
-                // Botão esquerdo
                 IconButton(
-                  onPressed: (){},
+                  onPressed: () {
+                    setState(() {
+                      indexT = indexT == 0 ? 0 : indexT - 1;
+                    });
+                  },
                   icon: Icon(Icons.arrow_back_ios, size: 70, color: iconeCor),
                 ),
-
-                // Texto centralizado
                 Expanded(
                   child: Center(
                     child: Text(
-                      "Tratamento A",
+                      "${tratamentos?[indexT] ?? ''}",
                       style: TextStyle(fontSize: 30),
                     ),
                   ),
                 ),
-
-                // Botão direito
                 IconButton(
-                  onPressed: (){},
+                  onPressed: () {
+                    setState(() {
+                      indexT = indexT == (tratamentos!.length - 1) ? (tratamentos!.length - 1) : indexT + 1;
+                    });
+                  },
                   icon: Icon(Icons.arrow_forward_ios, size: 70, color: iconeCor),
                 ),
               ],
             ),
-
-            SizedBox(height: 50),
+            SizedBox(height: 10),
+            if (mensagemErro != null)
+              Text(
+                mensagemErro!,
+                style: TextStyle(color: Colors.red),
+              ),
+            SizedBox(height: 40),
           ],
         ),
       ),
@@ -196,27 +276,90 @@ class _ColetandoState extends State<Coletando> {
             left: 47.0,
             child: FloatingActionButton(
               onPressed: () {
-                // Ação ao pressionar o botão esquerdo
+                _mostrarDialogo();
               },
-              backgroundColor: base, // Cor de fundo do botão esquerdo
-              child: Icon(Icons.search, color: Colors.white,), // Ícone do botão esquerdo
+              backgroundColor: base,
+              child: Icon(Icons.search, color: Colors.white,),
             ),
           ),
           Positioned(
             bottom: 0,
             right: 16.0,
             child: FloatingActionButton(
-              onPressed: () {
-                // Ação ao pressionar o botão direito
-              },
-              backgroundColor: base, // Cor de fundo do botão direito
-              child: Icon(Icons.save, color: Colors.white,), // Ícone do botão direito
+              onPressed: () {},
+              backgroundColor: base,
+              child: Icon(Icons.save, color: Colors.white,),
             ),
           ),
         ],
       ),
     );
   }
+
+  void _mostrarDialogo() {
+    String textoBusca = '';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          child: Container(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Pesquisar'),
+                SizedBox(height: 20),
+                DropdownButton<String>(
+                  value: dropdownValue,
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      dropdownValue = newValue!;
+                    });
+                  },
+                  hint: Text(dropdownValue), // Atualiza o hint para refletir o valor selecionado
+                  items: <String>['Tratamento', 'Repetição', 'Parcela']
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+
+                SizedBox(height: 20),
+                TextField(
+                  onChanged: (value) {
+                    textoBusca = value;
+                  },
+                  decoration: InputDecoration(
+                    labelText: 'Digite o termo de busca',
+                  ),
+                ),
+                SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: Text('Cancelar'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        buscar(textoBusca, dropdownValue);
+                        Navigator.of(context).pop();
+                      },
+                      child: Text('Buscar'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
-
-

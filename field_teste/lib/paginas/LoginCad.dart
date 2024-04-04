@@ -49,41 +49,6 @@ class LoginTab extends StatelessWidget {
   final emailController = TextEditingController();
   final senhaController = TextEditingController();
 
-  Future<void> realizarLogin(BuildContext context) async {
-    var dadosAPI = await fetch();
-    var emailAPI = dadosAPI['usuario'];
-    var senhaAPI = dadosAPI['senha'];
-
-    var emailUsuario = emailController.text;
-    var senhaUsuario = senhaController.text;
-
-    if (emailAPI == emailUsuario && senhaAPI == senhaUsuario) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => Principal()),
-      );
-    } else {
-      // Exibir mensagem de erro de login inválido
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Erro de Login'),
-            content: Text('E-mail ou senha incorretos.'),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -196,7 +161,10 @@ class LoginTab extends StatelessWidget {
                   FadeInUp(duration: Duration(milliseconds: 1900), child: GestureDetector(
                     onTap: () {
                       if(formKey.currentState!.validate()) {
-                        realizarLogin(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => Principal()),
+                        );
                       }
                     },
                     child: Container(
