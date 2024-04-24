@@ -9,6 +9,8 @@ import 'package:field_teste/paginas/Principal.dart';
 import 'package:field_teste/paginas/Banco.dart';
 import 'package:flutter/material.dart';
 
+import 'api/Teste.dart';
+
 void main() {
   runApp(const MyApp());
 }
@@ -21,7 +23,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Coletando(),
+      home: Principal(),
     );
   }
 }
