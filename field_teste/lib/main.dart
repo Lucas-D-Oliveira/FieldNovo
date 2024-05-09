@@ -1,6 +1,6 @@
 
+import 'package:field_teste/api/Firebase.dart';
 import 'package:field_teste/paginas/Perfil.dart';
-import 'package:field_teste/paginas/Projetos.dart';
 import 'package:field_teste/paginas/Coletando.dart';
 import 'package:field_teste/paginas/Coletas.dart';
 import 'package:field_teste/paginas/HomeP.dart';
@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Principal(),
+      home: Firebase(),
     );
   }
 }

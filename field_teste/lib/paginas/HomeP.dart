@@ -1,4 +1,5 @@
-import 'package:field_teste/paginas/Projetos.dart';
+import 'package:field_teste/paginas/Atividades.dart';
+import 'package:field_teste/paginas/Perfil.dart';
 import 'package:flutter/material.dart';
 import 'package:field_teste/api/api.dart';
 
@@ -64,7 +65,7 @@ class _HomePState extends State<HomeP> {
           onTap: () {
           Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => Projetos()),
+          MaterialPageRoute(builder: (context) => Atividades()),
           );
           },
           child: Container( ///////////////COLETA DE DADOS

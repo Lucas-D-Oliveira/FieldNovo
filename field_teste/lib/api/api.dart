@@ -1,39 +1,77 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class API {
   static const String baseURL = 'http://10.0.2.2:8000';
 
-  static Future<Map<String, dynamic>> fetch(String path) async {
-    http.Response response = await http.get(Uri.parse('$baseURL/$path'));
-    if (response.statusCode == 200) {
-      // Se o servidor retornar uma resposta OK, parse o JSON.
-      String jsonUTF8 = utf8.decode(response.bodyBytes);
-      return jsonDecode(jsonUTF8);
-    } else {
-      // Se a resposta não for OK, lance uma exceção.
-      throw Exception('Erro ao carregar dados da API, erro: ${response.statusCode}');
+  // Este método busca tanto atividades quanto coletas
+  static Future<List<AtividadesEColeta>> fetchAtividades() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    // Se os dados salvos existirem, remova-os antes de salvar os novos dados
+    if (prefs.containsKey('atividades')) {
+      prefs.remove('atividades');
     }
+
+    // Se não houver dados salvos ou se estiver online, faz a chamada para a API
+    if (await isOnline()) {
+      http.Response response = await http.get(Uri.parse('$baseURL/atividades'));
+      if (response.statusCode == 200) {
+        String jsonUTF8 = utf8.decode(response.bodyBytes);
+        print('Lista retornada pela API: $jsonUTF8');
+        List<dynamic> data = jsonDecode(jsonUTF8);
+
+        // Salva os novos dados tratados em SharedPreferences
+        prefs.setString('atividades', jsonUTF8);
+        return data.map((item) => AtividadesEColeta.fromJson(item)).toList();
+      } else {
+        throw Exception('Erro ao carregar dados da API, erro: ${response.statusCode}');
+      }
+    } else {
+      // Se não houver conexão de rede, tente recuperar os dados salvos
+      if (prefs.containsKey('atividades')) {
+        String? savedData = prefs.getString('atividades');
+        if (savedData != null) {
+          List<dynamic> data = jsonDecode(savedData);
+          return data.map((item) => AtividadesEColeta.fromJson(item)).toList();
+        }
+      }
+      throw Exception('Sem conexão de rede e dados salvos não encontrados.');
+    }
+  }
+
+
+
+  static Future<bool> isOnline() async {
+    try {
+      final result = await InternetAddress.lookup('google.com');
+      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+        return true;
+      }
+    } catch (_) {}
+    return false;
   }
 }
 
-class ProjetosAPI {
-  final String? tituloProj;
-  final String? tituloAtiv;
-  final String? pesqResp;
-  final String? municipio;
-  final String? local;
+class Atividade {
+  final String tituloProj;
+  final String tituloAtiv;
+  final String pesqResp;
+  final String municipio;
+  final String local;
 
-  ProjetosAPI({
-    this.tituloProj,
-    this.tituloAtiv,
-    this.pesqResp,
-    this.municipio,
-    this.local,
+  Atividade({
+    required this.tituloProj,
+    required this.tituloAtiv,
+    required this.pesqResp,
+    required this.municipio,
+    required this.local,
   });
 
-  factory ProjetosAPI.fromJson(Map<String, dynamic> json) {
-    return ProjetosAPI(
+  factory Atividade.fromJson(Map<String, dynamic> json) {
+    return Atividade(
       tituloProj: json['titulo_Proj'],
       tituloAtiv: json['titulo_Ativ'],
       pesqResp: json['pesq_Resp'],
@@ -43,30 +81,43 @@ class ProjetosAPI {
   }
 }
 
-class coletaAPI {
-  List<Map<String, List<String>>>? parcelas;
-  List<String>? tratamentos;
-  List<String>? repeticao;
-  List<String>? variavel;
+class Coleta {
+  final Map<String, List<String>> parcelas;
+  final List<String> tratamentos;
+  final List<String> repeticao;
+  final List<String> variavel;
 
-  coletaAPI({this.parcelas, this.tratamentos, this.repeticao, this.variavel});
+  Coleta({
+    required this.parcelas,
+    required this.tratamentos,
+    required this.repeticao,
+    required this.variavel,
+  });
 
-  coletaAPI.fromJson(Map<String, dynamic> json) {
-    parcelas = [];
-    json['parcelas'].forEach((key, value) {
-      parcelas!.add({key: value});
-    });
-    tratamentos = json['tratamentos'].cast<String>();
-    repeticao = json['repeticao'].cast<String>();
-    variavel = json['variavel'].cast<String>();
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['parcelas'] = this.parcelas;
-    data['tratamentos'] = this.tratamentos;
-    data['repeticao'] = this.repeticao;
-    data['variavel'] = this.variavel;
-    return data;
+  factory Coleta.fromJson(Map<String, dynamic> json) {
+    return Coleta(
+      parcelas: Map.from(json['parcelas']).map((key, value) => MapEntry(key, List<String>.from(value))),
+      tratamentos: List<String>.from(json['tratamentos']),
+      repeticao: List<String>.from(json['repeticao']),
+      variavel: List<String>.from(json['variavel']),
+    );
   }
 }
+
+class AtividadesEColeta {
+  final Atividade atividade;
+  late final Coleta coleta;
+
+  AtividadesEColeta({
+    required this.atividade,
+    required this.coleta,
+  });
+
+  factory AtividadesEColeta.fromJson(Map<String, dynamic> json) {
+    return AtividadesEColeta(
+      atividade: Atividade.fromJson(json['atividade']),
+      coleta: Coleta.fromJson(json['coleta']),
+    );
+  }
+}
+

@@ -1,71 +1,60 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api.dart';
 
 class Coletando extends StatefulWidget {
-  const Coletando({Key? key});
+  final AtividadesEColeta atividadesEColeta;
+
+  const Coletando({Key? key, required this.atividadesEColeta}) : super(key: key);
 
   @override
   State<Coletando> createState() => _ColetandoState();
 }
 
 class _ColetandoState extends State<Coletando> {
+  Map<String, List<String>> parcelas = {};
+  List<String> tratamentos = [];
+  List<String> repeticao = [];
+  List<String> variavel = [];
+
   int indexR = 0;
   int indexT = 0;
   int indexV = 0;
-  late Map<String, String?> parcelas = {};
-  late List<String> tratamentos = [];
-  late List<String> repeticao = [];
-  late List<String> variavel = [];
   Color iconeCor = Color(0xFF57636C);
   Color base = Color(0xFF038C4C);
-  String dropdownValue = 'Tratamento';
-  String? mensagemErro;
-  bool variavelNula = false;
-  late Map<String, String?> Celulas = {};
   late TextEditingController textController;
 
   @override
   void initState() {
     super.initState();
-    carregarDados();
     textController = TextEditingController();
+    _initializeData();
   }
 
-  void carregarDados() async {
-    Map<String, dynamic> data = await API.fetch("coleta");
+  Future<void> _initializeData() async {
+    await _fetchData();
+    await atualizarTextController();
+  }
+
+  Future<void> _fetchData() async {
+    parcelas = widget.atividadesEColeta.coleta.parcelas ?? {};
+    tratamentos = widget.atividadesEColeta.coleta.tratamentos ?? [];
+    repeticao = widget.atividadesEColeta.coleta.repeticao ?? [];
+    variavel = widget.atividadesEColeta.coleta.variavel ?? [];
+  }
+
+  Future<void> atualizarTextController() async {
+    String chaveAtual = '${variavel.elementAt(indexV)}-${repeticao.elementAt(indexR)}-${tratamentos.elementAt(indexT)}';
     setState(() {
-      parcelas = (data['parcelas'] as Map<String, dynamic>).map((key, value) => MapEntry(key, value.toString()));
-      tratamentos = (data['tratamentos'] as List).cast<String>();
-      repeticao = (data['repeticao'] as List).cast<String>();
-      variavel = (data['variavel'] as List).cast<String>();
-
-      Celulas = criarMapa();
-      atualizarTextController();
+      textController.text = parcelas[chaveAtual]?.first ?? '';
     });
-  }
-
-  Map<String, String?> criarMapa() {
-    Map<String, String?> Celulas = {};
-
-    if (variavel != null && repeticao != null && tratamentos != null) {
-      for (String varItem in variavel!) {
-        for (String repItem in repeticao!) {
-          for (String tratItem in tratamentos!) {
-            String chave = '$varItem-$repItem-$tratItem';
-            Celulas[chave] = '';
-          }
-        }
-      }
-    }
-
-    return Celulas;
   }
 
   String? encontrarParcela() {
     if (tratamentos != null && repeticao != null && parcelas != null) {
-      for (final entry in parcelas.entries) {
-        if (entry.value == '${tratamentos[indexT]}-${repeticao[indexR]}') {
+      for (final entry in parcelas!.entries) {
+        if (entry.value[0] == tratamentos![indexT] && entry.value[1] == repeticao![indexR]) {
           return entry.key;
         }
       }
@@ -73,58 +62,91 @@ class _ColetandoState extends State<Coletando> {
     return null;
   }
 
-  void buscar(String termo, String tipo) {
-    int novoIndice = 0;
-    bool encontrado = false;
+  void _mostrarDialogo() {
+    String textoBusca = '';
 
-    if (tipo == 'Tratamento') {
-      novoIndice = tratamentos.indexOf(termo);
-      if (novoIndice != -1) {
-        setState(() {
-          indexT = novoIndice;
-          mensagemErro = null;
-          atualizarTextController();
-        });
-        encontrado = true;
-      }
-    } else if (tipo == 'Repetição') {
-      novoIndice = repeticao.indexOf(termo);
-      if (novoIndice != -1) {
-        setState(() {
-          indexR = novoIndice;
-          mensagemErro = null;
-          atualizarTextController();
-        });
-        encontrado = true;
-      }
-    } else if (tipo == 'Parcela') {
-      for (final entry in parcelas.entries) {
-        if (entry.key == termo) {
-          setState(() {
-            indexT = tratamentos.indexOf(entry.value!.split('-')[0]);
-            indexR = repeticao.indexOf(entry.value!.split('-')[1]);
-            mensagemErro = null;
-            atualizarTextController();
-          });
-          encontrado = true;
-          break;
-        }
-      }
-    }
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Pesquisar'),
+                    const SizedBox(height: 20),
+                    DropB(
+                      initialValue: 'Tratamento',
+                      onValueChanged: (value) {
+                        setState(() {
+                          // Aqui você pode adicionar lógica para lidar com a mudança de valor do dropdown
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      onChanged: (value) {
+                        textoBusca = value;
+                      },
+                      decoration: const InputDecoration(
+                        labelText: 'Digite o termo de busca',
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: const Text('Cancelar'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            // Aqui você pode adicionar lógica para lidar com a busca
+                            Navigator.of(context).pop();
+                          },
+                          child: const Text('Buscar'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
-    if (!encontrado) {
-      setState(() {
-        mensagemErro = 'Item não encontrado';
-      });
-    }
+  Future<void> _salvarDados() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<Map<String, dynamic>> data = [];
+
+    // Construir uma lista de Map<String, dynamic> contendo os dados a serem salvos
+    data.add({
+      'parcelas': parcelas,
+      'tratamentos': tratamentos,
+      'repeticao': repeticao,
+      'variavel': variavel,
+    });
+
+    // Converter a lista de Map<String, dynamic> em uma string JSON
+    String jsonData = jsonEncode(data);
+
+    // Salvar os dados no SharedPreferences
+    await prefs.setString('atividades', jsonData);
   }
 
   @override
   Widget build(BuildContext context) {
+    String chaveAtual = '${variavel.elementAt(indexV)}-${repeticao.elementAt(indexR)}-${tratamentos.elementAt(indexT)}';
     String? parcelaEncontrada = encontrarParcela();
-    String chaveAtual = '${variavel[indexV]}-${repeticao[indexR]}-${tratamentos[indexT]}';
-    String? valorAtual = Celulas[chaveAtual];
-
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -166,12 +188,12 @@ class _ColetandoState extends State<Coletando> {
               SizedBox(height: 10),
               Center(
                 child: Text(
-                  'Variável ${indexV + 1}/${variavel!.length}',
+                  'Variável ${indexV + 1}/${variavel.length}',
                   style: TextStyle(fontSize: 20),
                 ),
               ),
               LinearProgressIndicator(
-                value: (indexV + 1) / variavel!.length,
+                value: (indexV + 1) / variavel.length,
                 minHeight: 20.0,
                 backgroundColor: Colors.grey[300],
                 valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
@@ -190,13 +212,13 @@ class _ColetandoState extends State<Coletando> {
                     icon: Icon(Icons.arrow_back_ios, size: 70, color: iconeCor),
                   ),
                   Text(
-                    "${variavel?[indexV] ?? ''}",
+                    "${variavel.elementAt(indexV) ?? ''}",
                     style: TextStyle(fontSize: 30),
                   ),
                   IconButton(
                     onPressed: () {
                       setState(() {
-                        indexV = indexV == (variavel!.length - 1) ? (variavel!.length - 1) : indexV + 1;
+                        indexV = indexV == (variavel.length - 1) ? (variavel.length - 1) : indexV + 1;
                         atualizarTextController();
                       });
                     },
@@ -205,36 +227,17 @@ class _ColetandoState extends State<Coletando> {
                 ],
               ),
               TextFormField(
-                enabled: !variavelNula,
                 controller: textController,
                 onChanged: (value) {
                   setState(() {
-                    Celulas[chaveAtual] = value;
+                    parcelas[chaveAtual] = value.split(',');
+                    _salvarDados(); // Chamar _salvarDados quando os dados forem alterados
                   });
                 },
                 decoration: InputDecoration(
                   border: OutlineInputBorder(borderSide: BorderSide(color: Colors.green)),
                   hintText: 'Informe valor',
                 ),
-              ),
-              Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.only(left: 16.0),
-                    child: Checkbox(
-                      value: variavelNula,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          variavelNula = value ?? false;
-                        });
-                      },
-                    ),
-                  ),
-                  Text(
-                    'Deixar variável nula',
-                    style: TextStyle(fontSize: 16.0),
-                  ),
-                ],
               ),
               SizedBox(height: 30),
               Row(
@@ -251,7 +254,7 @@ class _ColetandoState extends State<Coletando> {
                   Expanded(
                     child: Center(
                       child: Text(
-                        "${repeticao?[indexR] ?? ''}",
+                        "${repeticao.elementAt(indexR) ?? ''}",
                         style: TextStyle(fontSize: 30),
                       ),
                     ),
@@ -259,7 +262,7 @@ class _ColetandoState extends State<Coletando> {
                   IconButton(
                     onPressed: () {
                       setState(() {
-                        indexR = indexR == (repeticao!.length - 1) ? (repeticao!.length - 1) : indexR + 1;
+                        indexR = indexR == (repeticao.length - 1) ? (repeticao.length - 1) : indexR + 1;
                         atualizarTextController();
                       });
                     },
@@ -282,7 +285,7 @@ class _ColetandoState extends State<Coletando> {
                   Expanded(
                     child: Center(
                       child: Text(
-                        "${tratamentos?[indexT] ?? ''}",
+                        "${tratamentos.elementAt(indexT) ?? ''}",
                         style: TextStyle(fontSize: 30),
                       ),
                     ),
@@ -290,7 +293,7 @@ class _ColetandoState extends State<Coletando> {
                   IconButton(
                     onPressed: () {
                       setState(() {
-                        indexT = indexT == (tratamentos!.length - 1) ? (tratamentos!.length - 1) : indexT + 1;
+                        indexT = indexT == (tratamentos.length - 1) ? (tratamentos.length - 1) : indexT + 1;
                         atualizarTextController();
                       });
                     },
@@ -299,12 +302,6 @@ class _ColetandoState extends State<Coletando> {
                 ],
               ),
               SizedBox(height: 10),
-              if (mensagemErro != null)
-                Text(
-                  mensagemErro!,
-                  style: TextStyle(color: Colors.red),
-                ),
-              SizedBox(height: 40),
             ],
           ),
         ),
@@ -327,7 +324,7 @@ class _ColetandoState extends State<Coletando> {
             right: 16.0,
             child: FloatingActionButton(
               onPressed: () {
-                salvarMapaComoJSON(); // Chama a função para salvar o mapa como JSON
+                _salvarDados(); // Chamar _salvarDados quando o botão de salvar for pressionado
               },
               backgroundColor: base,
               child: Icon(Icons.save, color: Colors.white,),
@@ -336,94 +333,6 @@ class _ColetandoState extends State<Coletando> {
         ],
       ),
     );
-  }
-
-  void _mostrarDialogo() {
-    String textoBusca = '';
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Dialog(
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Pesquisar'),
-                    const SizedBox(height: 20),
-                    DropB(
-                      initialValue: dropdownValue,
-                      onValueChanged: (value) {
-                        setState(() {
-                          dropdownValue = value;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    TextField(
-                      onChanged: (value) {
-                        textoBusca = value;
-                      },
-                      decoration: const InputDecoration(
-                        labelText: 'Digite o termo de busca',
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                          child: const Text('Cancelar'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            buscar(textoBusca, dropdownValue);
-                            Navigator.of(context).pop();
-                          },
-                          child: const Text('Buscar'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void atualizarTextController() {
-    String chaveAtual = '${variavel?[indexV]}-${repeticao?[indexR]}-${tratamentos?[indexT]}';
-    textController.text = Celulas[chaveAtual] ?? '';
-  }
-
-  void salvarMapaComoJSON() {
-    Map<String, dynamic> jsonMap = {};
-
-    Celulas.forEach((chave, valor) {
-      if (valor != null && valor.isNotEmpty) {
-        jsonMap[chave] = valor;
-      } else if (!variavelNula) {
-        jsonMap[chave] = null;
-      }
-    });
-
-    String jsonString = json.encode(jsonMap);
-    print(jsonString); // Aqui você pode fazer o que quiser com a string JSON, como salvar em um arquivo ou enviar para algum serviço.
-  }
-
-  @override
-  void dispose() {
-    textController.dispose();
-    super.dispose();
   }
 }
 

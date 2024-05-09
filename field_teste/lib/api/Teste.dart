@@ -1,73 +1,60 @@
 import 'dart:convert';
+import 'package:field_teste/paginas/Atividades.dart';
 import 'package:flutter/material.dart';
-import 'package:field_teste/api/api.dart';
+import '../api/api.dart';
 
 class Teste extends StatefulWidget {
-  const Teste({Key? key});
+  final atividade;
+
+  const Teste({Key? key, required this.atividade}) : super(key: key);
 
   @override
   State<Teste> createState() => _TesteState();
 }
 
 class _TesteState extends State<Teste> {
+  late Map<String, String?> celulas;
   int indexR = 0;
   int indexT = 0;
   int indexV = 0;
-  Map<String, String?>? parcelas;
-  List<String>? tratamentos;
-  List<String>? repeticao;
-  List<String>? variavel;
   Color iconeCor = Color(0xFF57636C);
   Color base = Color(0xFF038C4C);
   String dropdownValue = 'Tratamento';
   String? mensagemErro;
   bool variavelNula = false;
-  late Map<String, String?> Celulas;
   late TextEditingController textController;
 
   @override
   void initState() {
     super.initState();
-    carregarDados();
+    celulas = criarMapa();
     textController = TextEditingController();
   }
 
-  void carregarDados() async {
-    Map<String, dynamic> data = await API.fetch("coleta");
-    setState(() {
-      parcelas = (data['parcelas'] as Map<String, dynamic>).map((key, value) => MapEntry(key, value.toString()));
-      tratamentos = (data['tratamentos'] as List).cast<String>();
-      repeticao = (data['repeticao'] as List).cast<String>();
-      variavel = (data['variavel'] as List).cast<String>();
-
-      Celulas = criarMapa();
-      atualizarTextController();
-    });
+  void atualizarTextController() {
+    String chaveAtual = '${widget.atividade.variavel[indexV]}-${widget.atividade.repeticao[indexR]}-${widget.atividade.tratamentos[indexT]}';
+    textController.text = celulas[chaveAtual] ?? '';
   }
 
   Map<String, String?> criarMapa() {
-    Map<String, String?> Celulas = {};
+    Map<String, String?> celulas = {};
 
-    if (variavel != null && repeticao != null && tratamentos != null) {
-      for (String varItem in variavel!) {
-        for (String repItem in repeticao!) {
-          for (String tratItem in tratamentos!) {
-            String chave = '$varItem-$repItem-$tratItem';
-            Celulas[chave] = '';
-          }
+    for (String varItem in widget.atividade.variavel) {
+      for (String repItem in widget.atividade.repeticao) {
+        for (String tratItem in widget.atividade.tratamentos) {
+          String chave = '$varItem-$repItem-$tratItem';
+          celulas[chave] = '';
         }
       }
     }
 
-    return Celulas;
+    return celulas;
   }
 
   String? encontrarParcela() {
-    if (tratamentos != null && repeticao != null && parcelas != null) {
-      for (final entry in parcelas!.entries) {
-        if (entry.value == '${tratamentos![indexT]}-${repeticao![indexR]}') {
-          return entry.key;
-        }
+    for (final entry in celulas.entries) {
+      if (entry.value == '${widget.atividade.tratamentos[indexT]}-${widget.atividade.repeticao[indexR]}') {
+        return entry.key;
       }
     }
     return null;
@@ -78,33 +65,39 @@ class _TesteState extends State<Teste> {
     bool encontrado = false;
 
     if (tipo == 'Tratamento') {
-      novoIndice = tratamentos!.indexOf(termo);
+      novoIndice = widget.atividade.tratamentos.indexOf(termo);
       if (novoIndice != -1) {
         setState(() {
           indexT = novoIndice;
           mensagemErro = null;
+          atualizarTextController();
         });
         encontrado = true;
       }
     } else if (tipo == 'Repetição') {
-      novoIndice = repeticao!.indexOf(termo);
+      novoIndice = widget.atividade.repeticao.indexOf(termo);
       if (novoIndice != -1) {
         setState(() {
           indexR = novoIndice;
           mensagemErro = null;
+          atualizarTextController();
         });
         encontrado = true;
       }
     } else if (tipo == 'Parcela') {
-      for (final entry in parcelas!.entries) {
-        if (entry.key == termo) {
-          setState(() {
-            indexT = tratamentos!.indexOf(entry.value!.split('-')[0]);
-            indexR = repeticao!.indexOf(entry.value!.split('-')[1]);
-            mensagemErro = null;
-          });
-          encontrado = true;
-          break;
+      for (final entry in widget.atividade.parcelas.asMap().entries) {
+        List<String> parts = entry.value.split('-');
+        if (parts.length == 3) {
+          if (parts[0] == termo) {
+            setState(() {
+              indexT = widget.atividade.tratamentos.indexOf(parts[0]);
+              indexR = widget.atividade.repeticao.indexOf(parts[1]);
+              mensagemErro = null;
+              atualizarTextController();
+            });
+            encontrado = true;
+            break;
+          }
         }
       }
     }
@@ -119,8 +112,8 @@ class _TesteState extends State<Teste> {
   @override
   Widget build(BuildContext context) {
     String? parcelaEncontrada = encontrarParcela();
-    String chaveAtual = '${variavel?[indexV]}-${repeticao?[indexR]}-${tratamentos?[indexT]}';
-    String? valorAtual = Celulas[chaveAtual];
+    String chaveAtual = '${widget.atividade.variavel[indexV]}-${widget.atividade.repeticao[indexR]}-${widget.atividade.tratamentos[indexT]}';
+    String? valorAtual = celulas[chaveAtual];
 
     return Scaffold(
       appBar: AppBar(
@@ -163,12 +156,12 @@ class _TesteState extends State<Teste> {
               SizedBox(height: 10),
               Center(
                 child: Text(
-                  'Variável ${indexV + 1}/${variavel?.length}',
+                  'Variável ${indexV + 1}/${widget.atividade.variavel.length}',
                   style: TextStyle(fontSize: 20),
                 ),
               ),
               LinearProgressIndicator(
-                value: (indexV + 1) / variavel!.length,
+                value: (indexV + 1) / widget.atividade.variavel.length,
                 minHeight: 20.0,
                 backgroundColor: Colors.grey[300],
                 valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
@@ -187,13 +180,13 @@ class _TesteState extends State<Teste> {
                     icon: Icon(Icons.arrow_back_ios, size: 70, color: iconeCor),
                   ),
                   Text(
-                    "${variavel?[indexV] ?? ''}",
+                    "${widget.atividade.variavel[indexV]}",
                     style: TextStyle(fontSize: 30),
                   ),
                   IconButton(
                     onPressed: () {
                       setState(() {
-                        indexV = indexV == (variavel!.length - 1) ? (variavel!.length - 1) : indexV + 1;
+                        indexV = indexV == (widget.atividade.variavel.length - 1) ? (widget.atividade.variavel.length - 1) : indexV + 1;
                         atualizarTextController();
                       });
                     },
@@ -206,7 +199,7 @@ class _TesteState extends State<Teste> {
                 controller: textController,
                 onChanged: (value) {
                   setState(() {
-                    Celulas[chaveAtual] = value;
+                    celulas[chaveAtual] = value;
                   });
                 },
                 decoration: InputDecoration(
@@ -248,7 +241,7 @@ class _TesteState extends State<Teste> {
                   Expanded(
                     child: Center(
                       child: Text(
-                        "${repeticao?[indexR] ?? ''}",
+                        "${widget.atividade.repeticao[indexR]}",
                         style: TextStyle(fontSize: 30),
                       ),
                     ),
@@ -256,7 +249,7 @@ class _TesteState extends State<Teste> {
                   IconButton(
                     onPressed: () {
                       setState(() {
-                        indexR = indexR == (repeticao!.length - 1) ? (repeticao!.length - 1) : indexR + 1;
+                        indexR = indexR == (widget.atividade.repeticao.length - 1) ? (widget.atividade.repeticao.length - 1) : indexR + 1;
                         atualizarTextController();
                       });
                     },
@@ -279,7 +272,7 @@ class _TesteState extends State<Teste> {
                   Expanded(
                     child: Center(
                       child: Text(
-                        "${tratamentos?[indexT] ?? ''}",
+                        "${widget.atividade.tratamentos[indexT]}",
                         style: TextStyle(fontSize: 30),
                       ),
                     ),
@@ -287,7 +280,7 @@ class _TesteState extends State<Teste> {
                   IconButton(
                     onPressed: () {
                       setState(() {
-                        indexT = indexT == (tratamentos!.length - 1) ? (tratamentos!.length - 1) : indexT + 1;
+                        indexT = indexT == (widget.atividade.tratamentos.length - 1) ? (widget.atividade.tratamentos.length - 1) : indexT + 1;
                         atualizarTextController();
                       });
                     },
@@ -324,7 +317,7 @@ class _TesteState extends State<Teste> {
             right: 16.0,
             child: FloatingActionButton(
               onPressed: () {
-                salvarMapaComoJSON(); // Chama a função para salvar o mapa como JSON
+                salvarMapaComoJSON();
               },
               backgroundColor: base,
               child: Icon(Icons.save, color: Colors.white,),
@@ -397,15 +390,10 @@ class _TesteState extends State<Teste> {
     );
   }
 
-  void atualizarTextController() {
-    String chaveAtual = '${variavel?[indexV]}-${repeticao?[indexR]}-${tratamentos?[indexT]}';
-    textController.text = Celulas[chaveAtual] ?? '';
-  }
-
   void salvarMapaComoJSON() {
     Map<String, dynamic> jsonMap = {};
 
-    Celulas.forEach((chave, valor) {
+    celulas.forEach((chave, valor) {
       if (valor != null && valor.isNotEmpty) {
         jsonMap[chave] = valor;
       } else if (!variavelNula) {
@@ -414,7 +402,7 @@ class _TesteState extends State<Teste> {
     });
 
     String jsonString = json.encode(jsonMap);
-    print(jsonString); // Aqui você pode fazer o que quiser com a string JSON, como salvar em um arquivo ou enviar para algum serviço.
+    print(jsonString);
   }
 
   @override
@@ -464,3 +452,4 @@ class _DropBState extends State<DropB> {
     );
   }
 }
+
