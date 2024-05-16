@@ -65,7 +65,7 @@ class _HomePState extends State<HomeP> {
           onTap: () {
           Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => Atividades()),
+          MaterialPageRoute(builder: (context) => Perfil()),
           );
           },
           child: Container( ///////////////COLETA DE DADOS

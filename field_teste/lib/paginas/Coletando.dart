@@ -4,9 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api.dart';
 
 class Coletando extends StatefulWidget {
-  final AtividadesEColeta atividadesEColeta;
 
-  const Coletando({Key? key, required this.atividadesEColeta}) : super(key: key);
+  const Coletando({Key? key,}) : super(key: key);
 
   @override
   State<Coletando> createState() => _ColetandoState();
@@ -33,16 +32,9 @@ class _ColetandoState extends State<Coletando> {
   }
 
   Future<void> _initializeData() async {
-    await _fetchData();
     await atualizarTextController();
   }
 
-  Future<void> _fetchData() async {
-    parcelas = widget.atividadesEColeta.coleta.parcelas ?? {};
-    tratamentos = widget.atividadesEColeta.coleta.tratamentos ?? [];
-    repeticao = widget.atividadesEColeta.coleta.repeticao ?? [];
-    variavel = widget.atividadesEColeta.coleta.variavel ?? [];
-  }
 
   Future<void> atualizarTextController() async {
     String chaveAtual = '${variavel.elementAt(indexV)}-${repeticao.elementAt(indexR)}-${tratamentos.elementAt(indexT)}';
