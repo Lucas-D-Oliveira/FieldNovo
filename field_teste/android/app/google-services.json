@@ -1,14 +1,13 @@
 {
   "project_info": {
-    "project_number": "780430676071",
-    "firebase_url": "https://testecampo-4aaaa-default-rtdb.firebaseio.com",
-    "project_id": "testecampo-4aaaa",
-    "storage_bucket": "testecampo-4aaaa.appspot.com"
+    "project_number": "463578733203",
+    "project_id": "testecampo2-813a9",
+    "storage_bucket": "testecampo2-813a9.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:780430676071:android:b16940234711ffed4544c2",
+        "mobilesdk_app_id": "1:463578733203:android:5bb094f751d71ffdd60b66",
         "android_client_info": {
           "package_name": "com.example.field_teste"
         }
@@ -16,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyB81gK6OuaWHQlgzfKhOWIBOAFmEe-1u7M"
+          "current_key": "AIzaSyCUYHg_F1E1fdtlCr_SsY1HMVUYMpa6oEA"
         }
       ],
       "services": {
@@ -27,15 +26,15 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:780430676071:android:a45cc16f16b407514544c2",
+        "mobilesdk_app_id": "1:463578733203:android:9c3253cbec50f60fd60b66",
         "android_client_info": {
-          "package_name": "com.example.projeto_f"
+          "package_name": "com.example.projeto_idr"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyB81gK6OuaWHQlgzfKhOWIBOAFmEe-1u7M"
+          "current_key": "AIzaSyCUYHg_F1E1fdtlCr_SsY1HMVUYMpa6oEA"
         }
       ],
       "services": {
